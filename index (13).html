@@ -1,0 +1,1668 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#1a1a1a">
+<title>나의 업무 비서</title>
+
+<!-- PWA: 앱처럼 작동하게 만들기 -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="업무비서">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="application-name" content="업무비서">
+
+<!-- 인라인 SVG 앱 아이콘 (별도 파일 필요 없음) -->
+<link rel="icon" type="image/svg+xml" href='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="22" fill="%231c1c1c"/><text x="50" y="62" font-size="50" text-anchor="middle" fill="white" font-family="-apple-system,sans-serif">📚</text></svg>'>
+<link rel="apple-touch-icon" href='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="22" fill="%231c1c1c"/><text x="50" y="62" font-size="50" text-anchor="middle" fill="white" font-family="-apple-system,sans-serif">📚</text></svg>'>
+
+<!-- 인라인 Web App Manifest -->
+<link rel="manifest" href='data:application/json;utf8,{"name":"나의 업무 비서","short_name":"업무비서","description":"AI 기반 은행업무 도우미","start_url":"./","display":"standalone","background_color":"%23161615","theme_color":"%231a1a1a","orientation":"portrait","icons":[{"src":"data:image/svg+xml;utf8,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 192 192%27><rect width=%27192%27 height=%27192%27 rx=%2742%27 fill=%27%231c1c1c%27/><text x=%2796%27 y=%27120%27 font-size=%2796%27 text-anchor=%27middle%27 fill=%27white%27 font-family=%27sans-serif%27>📚</text></svg>","sizes":"192x192","type":"image/svg+xml","purpose":"any maskable"},{"src":"data:image/svg+xml;utf8,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 512 512%27><rect width=%27512%27 height=%27512%27 rx=%27112%27 fill=%27%231c1c1c%27/><text x=%27256%27 y=%27320%27 font-size=%27256%27 text-anchor=%27middle%27 fill=%27white%27 font-family=%27sans-serif%27>📚</text></svg>","sizes":"512x512","type":"image/svg+xml","purpose":"any maskable"}]}'>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<style>
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; background: #f5f5f4; color: #1c1c1c; line-height: 1.6; font-size: 15px; -webkit-font-smoothing: antialiased; }
+.app { max-width: 600px; margin: 0 auto; min-height: 100vh; background: #ffffff; }
+header { padding: 18px 20px 14px; background: #ffffff; border-bottom: 1px solid #ebeae6; position: sticky; top: 0; z-index: 10; }
+header h1 { margin: 0; font-size: 18px; font-weight: 600; color: #1c1c1c; display: flex; align-items: center; gap: 8px; }
+header p { margin: 2px 0 0; font-size: 12px; color: #888; }
+.ai-badge { font-size: 10px; padding: 2px 6px; background: #1c1c1c; color: #fff; border-radius: 4px; font-weight: 500; }
+.ai-badge.off { background: #c8c5bf; }
+.ai-badge.eco { background: #137333; }
+
+.tabs { display: flex; gap: 4px; padding: 8px; background: #f5f5f4; margin: 12px 16px 0; border-radius: 10px; }
+.tab { flex: 1; padding: 9px; font-size: 12px; font-weight: 500; text-align: center; border: none; background: transparent; color: #666; border-radius: 7px; cursor: pointer; transition: all 0.15s; }
+.tab.active { background: #ffffff; color: #1c1c1c; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+.panel { padding: 16px; display: none; }
+.panel.active { display: block; }
+
+.card { background: #ffffff; border: 1px solid #ebeae6; border-radius: 12px; padding: 14px; margin-bottom: 10px; }
+.card-title { font-size: 14px; font-weight: 600; margin: 0 0 4px; }
+.card-meta { font-size: 11px; color: #999; margin-bottom: 8px; }
+.card-body { font-size: 13px; color: #444; line-height: 1.65; white-space: pre-wrap; word-break: break-word; max-height: 200px; overflow-y: auto; }
+.card-actions { display: flex; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #f0efeb; }
+
+.tag { display: inline-block; font-size: 11px; padding: 2px 8px; background: #f0efeb; color: #666; border-radius: 4px; margin-right: 4px; }
+.tag.cat-규정 { background: #e8f0fe; color: #1967d2; }
+.tag.cat-상품 { background: #e6f4ea; color: #137333; }
+.tag.cat-절차 { background: #fef7e0; color: #b06000; }
+.tag.cat-전결 { background: #fce8e6; color: #c5221f; }
+.tag.cat-기타 { background: #f0efeb; color: #666; }
+.tag.size { background: #ede8fb; color: #5b3eb0; }
+
+input[type="text"], input[type="search"], input[type="password"], textarea, select { width: 100%; padding: 11px 12px; font-size: 14px; border: 1px solid #ddd; border-radius: 8px; background: #ffffff; font-family: inherit; -webkit-appearance: none; appearance: none; margin-bottom: 8px; }
+textarea { min-height: 90px; resize: vertical; line-height: 1.6; }
+input:focus, textarea:focus, select:focus { outline: none; border-color: #888; }
+
+button { font-family: inherit; font-size: 14px; font-weight: 500; padding: 11px 16px; border: 1px solid #ddd; background: #ffffff; color: #1c1c1c; border-radius: 8px; cursor: pointer; transition: all 0.1s; }
+button:active { transform: scale(0.98); }
+button.primary { background: #1c1c1c; color: #ffffff; border-color: #1c1c1c; }
+button.danger { color: #c5221f; border-color: #f5c6c2; }
+button.small { padding: 6px 10px; font-size: 12px; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-full { width: 100%; }
+
+.search-bar { position: relative; margin-bottom: 12px; }
+.search-bar input { padding-left: 36px; }
+.search-bar::before { content: "🔍"; position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 14px; opacity: 0.4; }
+
+.empty { text-align: center; padding: 40px 20px; color: #999; font-size: 13px; }
+.empty-icon { font-size: 32px; margin-bottom: 8px; opacity: 0.3; }
+
+.warning { background: #fef7e0; border: 1px solid #fde293; border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; font-size: 12px; color: #5a3e00; line-height: 1.6; }
+.warning strong { display: block; margin-bottom: 4px; font-size: 13px; color: #b06000; }
+.warning.danger { background: #fce8e6; border-color: #f5c6c2; color: #5a1410; }
+.warning.danger strong { color: #c5221f; }
+.warning.success { background: #e6f4ea; border-color: #ceead6; color: #0d5223; }
+.warning.success strong { color: #137333; }
+
+.section-label { font-size: 12px; font-weight: 600; color: #666; margin: 16px 0 6px; text-transform: uppercase; letter-spacing: 0.4px; }
+.stat-row { display: flex; gap: 8px; margin-bottom: 14px; }
+.stat { flex: 1; background: #f5f5f4; border-radius: 10px; padding: 12px; }
+.stat-value { font-size: 22px; font-weight: 600; line-height: 1; }
+.stat-label { font-size: 11px; color: #888; margin-top: 4px; }
+
+.match { background: #fff4d6; padding: 1px 2px; border-radius: 2px; font-weight: 600; }
+
+.toolbar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.toolbar button { font-size: 12px; padding: 7px 12px; }
+
+/* 일괄 작업 영역 */
+.bulk-actions { background: #f5f5f4; border-radius: 8px; padding: 8px 10px; margin-bottom: 12px; }
+.bulk-actions button { font-size: 12px; padding: 7px 10px; }
+.card.selectable { cursor: pointer; transition: all 0.15s; }
+.card.selectable:hover { background: #faf9f6; }
+.card.selected { background: #e8f0fe; border-color: #4a90e2; }
+.card-checkbox { display: inline-block; width: 18px; height: 18px; border: 2px solid #999; border-radius: 4px; margin-right: 8px; vertical-align: middle; position: relative; flex-shrink: 0; }
+.card.selected .card-checkbox { background: #4a90e2; border-color: #4a90e2; }
+.card.selected .card-checkbox::after { content: '✓'; color: white; position: absolute; top: -3px; left: 2px; font-size: 14px; font-weight: bold; }
+.card-row { display: flex; align-items: flex-start; }
+
+details { background: #f9f9f7; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; font-size: 13px; }
+details summary { cursor: pointer; font-weight: 500; }
+details[open] summary { margin-bottom: 6px; }
+details p { margin: 4px 0; color: #555; line-height: 1.6; }
+
+.hidden { display: none !important; }
+
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1c1c1c; color: #fff; padding: 10px 18px; border-radius: 8px; font-size: 13px; z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.2s; max-width: 90%; text-align: center; }
+.toast.show { opacity: 1; }
+
+.upload-zone { border: 2px dashed #c8c5bf; border-radius: 12px; padding: 24px 16px; text-align: center; background: #faf9f6; cursor: pointer; transition: all 0.15s; margin-bottom: 12px; }
+.upload-zone:hover, .upload-zone.dragover { border-color: #1c1c1c; background: #f0efeb; }
+.upload-zone input[type="file"] { display: none; }
+.upload-icon { font-size: 32px; margin-bottom: 6px; opacity: 0.4; }
+.upload-text { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
+.upload-hint { font-size: 12px; color: #888; }
+
+.file-item { background: #f5f5f4; border-radius: 8px; padding: 10px 12px; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.file-item .file-icon { font-size: 18px; }
+.file-item .file-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-item .file-status { font-size: 11px; color: #888; }
+.file-item.success { background: #e6f4ea; }
+.file-item.error { background: #fce8e6; }
+.file-item.processing { background: #fff4d6; }
+
+.section-divider { text-align: center; margin: 20px 0 14px; position: relative; font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: 0.5px; }
+.section-divider::before, .section-divider::after { content: ''; position: absolute; top: 50%; width: 30%; height: 1px; background: #ebeae6; }
+.section-divider::before { left: 0; }
+.section-divider::after { right: 0; }
+
+.chat-container { background: #f8f7f3; border-radius: 12px; padding: 12px; margin-bottom: 12px; max-height: 60vh; overflow-y: auto; }
+.chat-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; margin-bottom: 12px; border-bottom: 1px solid #ebeae6; font-size: 12px; color: #666; }
+.chat-header strong { color: #1c1c1c; }
+
+.msg { margin-bottom: 14px; }
+.msg.user { display: flex; justify-content: flex-end; }
+.msg.user .bubble { background: #1c1c1c; color: #fff; border-radius: 16px 16px 4px 16px; padding: 10px 14px; max-width: 85%; font-size: 14px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+.msg.ai .ai-header { display: flex; align-items: center; gap: 8px; font-size: 11px; color: #666; margin-bottom: 6px; }
+.msg.ai .ai-icon { width: 22px; height: 22px; border-radius: 50%; background: #1c1c1c; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; }
+.msg.ai .bubble { background: #fff; border: 1px solid #ebeae6; border-radius: 4px 16px 16px 16px; padding: 12px 14px; font-size: 14px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; }
+.msg.ai .bubble strong { font-weight: 600; }
+.msg.ai .sources { margin-top: 8px; padding-top: 8px; border-top: 1px solid #f0efeb; font-size: 11px; color: #888; }
+.msg.ai .sources .src-tag { display: inline-block; background: #f5f5f4; padding: 2px 7px; border-radius: 4px; margin: 2px 4px 2px 0; font-size: 10px; }
+.msg.ai .meta-row { font-size: 10px; color: #aaa; margin-top: 6px; display: flex; gap: 10px; flex-wrap: wrap; }
+
+.thinking { display: flex; align-items: center; gap: 8px; padding: 14px; background: #fff; border: 1px solid #ebeae6; border-radius: 12px; margin-bottom: 14px; font-size: 13px; color: #666; }
+.dots { display: flex; gap: 4px; }
+.dots span { width: 6px; height: 6px; border-radius: 50%; background: #888; animation: bounce 1.2s infinite ease-in-out; }
+.dots span:nth-child(2) { animation-delay: 0.15s; }
+.dots span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes bounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.5; } 30% { transform: translateY(-6px); opacity: 1; } }
+
+.chat-controls { position: sticky; bottom: 0; background: #fff; padding: 10px 0; margin-top: 8px; }
+.chat-input-row { display: flex; gap: 6px; align-items: flex-end; }
+.chat-input-row textarea { flex: 1; min-height: 44px; max-height: 120px; margin-bottom: 0; padding: 11px 14px; border-radius: 22px; resize: none; }
+.chat-input-row button { flex-shrink: 0; padding: 11px 14px; border-radius: 22px; white-space: nowrap; }
+
+.chat-action-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.chat-action-row button { flex: 1; padding: 9px; font-size: 12px; }
+
+.cost-info { font-size: 10px; color: #999; text-align: right; margin-top: 4px; }
+.cost-info.saved { color: #137333; font-weight: 500; }
+
+.saved-chats-list { margin-top: 12px; }
+.saved-chat-item { background: #fff; border: 1px solid #ebeae6; border-radius: 10px; padding: 12px; margin-bottom: 8px; cursor: pointer; }
+.saved-chat-item:hover { background: #f9f9f7; }
+.saved-chat-item .title { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+.saved-chat-item .preview { font-size: 12px; color: #888; line-height: 1.5; }
+.saved-chat-item .meta { font-size: 11px; color: #aaa; margin-top: 6px; }
+
+/* 비용 최적화 토글 */
+.eco-toggle { background: #f5f5f4; border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; }
+.eco-toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.eco-toggle-row > label:first-child { font-size: 13px; font-weight: 500; flex: 1; }
+.toggle-switch { position: relative; display: inline-block; width: 46px; height: 26px; flex-shrink: 0; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #ccc; transition: .2s; border-radius: 26px; }
+.toggle-slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background: white; transition: .2s; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+.toggle-switch input:checked + .toggle-slider { background: #137333; }
+.toggle-switch input:checked + .toggle-slider:before { transform: translateX(20px); }
+.eco-current { font-size: 11px; color: #137333; margin-top: 6px; font-weight: 500; }
+.eco-current.off { color: #b06000; }
+
+@media (prefers-color-scheme: dark) {
+  body { background: #0f0f0e; color: #e8e8e6; }
+  .app { background: #161615; }
+  header { background: #161615; border-bottom-color: #2a2a28; }
+  header h1 { color: #e8e8e6; }
+  .ai-badge { background: #e8e8e6; color: #161615; }
+  .ai-badge.off { background: #3a3a37; color: #888; }
+  .ai-badge.eco { background: #2d8c5a; color: #fff; }
+  .tabs { background: #1f1f1d; }
+  .tab { color: #888; }
+  .tab.active { background: #2d2d2a; color: #e8e8e6; }
+  .card { background: #1f1f1d; border-color: #2a2a28; }
+  .card-body { color: #c8c8c5; }
+  .card-actions { border-top-color: #2a2a28; }
+  input, textarea, select { background: #1f1f1d; border-color: #2a2a28; color: #e8e8e6; }
+  input:focus, textarea:focus, select:focus { border-color: #555; }
+  button { background: #2a2a28; border-color: #2a2a28; color: #e8e8e6; }
+  button.primary { background: #e8e8e6; color: #161615; border-color: #e8e8e6; }
+  .stat { background: #1f1f1d; }
+  details { background: #1f1f1d; }
+  .warning { background: #3d2f0a; border-color: #5a4615; color: #f5d486; }
+  .warning strong { color: #f5b942; }
+  .warning.danger { background: #3a1a1a; border-color: #5c2020; color: #f4b4b1; }
+  .warning.danger strong { color: #f5736e; }
+  .warning.success { background: #1a3a25; border-color: #2d5c3e; color: #a3d9b8; }
+  .warning.success strong { color: #5dc97f; }
+  .tag { background: #2a2a28; color: #aaa; }
+  .upload-zone { border-color: #3a3a37; background: #1a1a18; }
+  .upload-zone:hover, .upload-zone.dragover { border-color: #888; background: #232320; }
+  .file-item { background: #1f1f1d; }
+  .file-item.success { background: #1a3a25; }
+  .file-item.error { background: #3a1a1a; }
+  .file-item.processing { background: #3d2f0a; }
+  .section-divider::before, .section-divider::after { background: #2a2a28; }
+  .chat-container { background: #1a1a18; }
+  .chat-header { border-bottom-color: #2a2a28; color: #aaa; }
+  .chat-header strong { color: #e8e8e6; }
+  .msg.user .bubble { background: #e8e8e6; color: #161615; }
+  .msg.ai .ai-icon { background: #e8e8e6; color: #161615; }
+  .msg.ai .bubble { background: #1f1f1d; border-color: #2a2a28; }
+  .msg.ai .sources { border-top-color: #2a2a28; color: #aaa; }
+  .msg.ai .sources .src-tag { background: #2a2a28; }
+  .thinking { background: #1f1f1d; border-color: #2a2a28; color: #aaa; }
+  .chat-controls { background: #161615; }
+  .saved-chat-item { background: #1f1f1d; border-color: #2a2a28; }
+  .saved-chat-item:hover { background: #232320; }
+  .saved-chat-item .title { color: #e8e8e6; }
+  .eco-toggle { background: #1f1f1d; }
+  .cost-info.saved { color: #5dc97f; }
+  .eco-current { color: #5dc97f; }
+  .eco-current.off { color: #f5b942; }
+  .bulk-actions { background: #1f1f1d; }
+  .card.selectable:hover { background: #232320; }
+  .card.selected { background: #1a2f4a; border-color: #4a90e2; }
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header>
+    <h1>나의 업무 비서 <span class="ai-badge off" id="ai-badge">AI OFF</span></h1>
+    <p>모든 기기에서 앱처럼 사용 (PWA)</p>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="search">물어보기</button>
+    <button class="tab" data-tab="add">자료 추가</button>
+    <button class="tab" data-tab="list">목록</button>
+    <button class="tab" data-tab="saved">대화 기록</button>
+    <button class="tab" data-tab="settings">설정</button>
+  </div>
+
+  <div class="panel active" id="panel-search">
+    <div class="warning danger hidden" id="ai-disabled-warn">
+      <strong>⚠ AI 기능이 꺼져있어요</strong>
+      설정 탭에서 Claude API 키를 등록하시면 AI 선배가 답해드려요.
+    </div>
+
+    <div id="chat-area" class="hidden">
+      <div class="chat-container" id="chat-messages">
+        <div class="chat-header">
+          <span><strong id="chat-topic">대화 중</strong></span>
+          <span id="msg-count">0개 메시지</span>
+        </div>
+        <div id="messages-list"></div>
+      </div>
+      <div class="chat-action-row">
+        <button class="small" onclick="endConversation(true)">💾 저장하고 끝내기</button>
+        <button class="small" onclick="endConversation(false)">🚪 그냥 끝내기</button>
+      </div>
+    </div>
+
+    <div id="initial-input">
+      <textarea id="ai-question" placeholder="고객 상황이나 업무 질문을 자유롭게 적어주세요.
+
+예시:
+· 시가 5억 아파트로 기업운전자금 받고 싶다는데?
+· 비거주자 외화송금 한도 초과시 어떻게 처리해?"></textarea>
+      <button class="primary btn-full" onclick="startConversation()" id="ask-btn" disabled>AI 선배에게 물어보기</button>
+    </div>
+
+    <div id="followup-input" class="chat-controls hidden">
+      <div class="chat-input-row">
+        <textarea id="followup-question" placeholder="이어서 질문해보세요..." rows="1"></textarea>
+        <button class="primary" onclick="sendFollowup()" id="followup-btn">보내기</button>
+      </div>
+      <div class="cost-info" id="cost-info"></div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-add">
+    <div class="warning">
+      <strong>⚠ 입력 전 꼭 확인</strong>
+      대외비·고객정보·내부 영업자료는 절대 입력 금지. AI 사용 시 자료 일부가 외부로 전송되니, 회사 정보보호지침 확인 필수.
+    </div>
+    <p class="section-label">📂 파일로 업로드</p>
+    <label class="upload-zone" id="upload-zone">
+      <input type="file" id="file-input" multiple accept=".pdf,.docx,.txt,.md">
+      <div class="upload-icon">📄</div>
+      <div class="upload-text">파일 선택 또는 끌어다 놓기</div>
+      <div class="upload-hint">PDF · 워드(.docx) · 텍스트(.txt, .md)</div>
+    </label>
+    <div id="file-list"></div>
+    <div id="extracted-area" class="hidden">
+      <p class="section-label" style="margin-top: 16px;">추출된 내용 확인 후 저장</p>
+      <input type="text" id="ext-title" placeholder="제목">
+      <select id="ext-category">
+        <option value="규정">📘 규정</option>
+        <option value="상품">💰 상품</option>
+        <option value="절차">📋 절차</option>
+        <option value="전결">✍️ 전결</option>
+        <option value="기타">📌 기타</option>
+      </select>
+      <input type="text" id="ext-tags" placeholder="태그 (쉼표로 구분, 선택)">
+      <textarea id="ext-body" style="min-height:180px"></textarea>
+      <div style="display: flex; gap: 8px;">
+        <button class="primary" style="flex:1" onclick="saveExtracted()">저장</button>
+        <button onclick="cancelExtracted()">취소</button>
+      </div>
+    </div>
+    <div class="section-divider">또는</div>
+    <p class="section-label">✏️ 직접 입력</p>
+    <input type="text" id="new-title" placeholder="제목">
+    <select id="new-category">
+      <option value="규정">📘 규정</option>
+      <option value="상품">💰 상품</option>
+      <option value="절차">📋 절차</option>
+      <option value="전결">✍️ 전결</option>
+      <option value="기타">📌 기타</option>
+    </select>
+    <input type="text" id="new-tags" placeholder="태그 (쉼표로 구분, 선택)">
+    <textarea id="new-body" placeholder="규정 내용·절차·핵심 포인트"></textarea>
+    <button class="primary btn-full" onclick="saveNew()">자료 저장</button>
+  </div>
+
+  <div class="panel" id="panel-list">
+    <div class="stat-row">
+      <div class="stat"><div class="stat-value" id="stat-total">0</div><div class="stat-label">전체 자료</div></div>
+      <div class="stat"><div class="stat-value" id="stat-cats">0</div><div class="stat-label">카테고리</div></div>
+      <div class="stat"><div class="stat-value" id="stat-storage">0KB</div><div class="stat-label">사용량</div></div>
+    </div>
+    <div class="search-bar">
+      <input type="search" id="list-filter" placeholder="목록에서 필터링">
+    </div>
+    <div class="toolbar" id="quick-filters">
+      <button class="small primary" data-filter="">전체</button>
+      <button class="small" data-filter="규정">규정</button>
+      <button class="small" data-filter="상품">상품</button>
+      <button class="small" data-filter="절차">절차</button>
+      <button class="small" data-filter="전결">전결</button>
+    </div>
+
+    <!-- 일괄 작업 영역 -->
+    <div class="bulk-actions" id="bulk-actions">
+      <div id="bulk-default-actions" style="display:flex; gap:6px;">
+        <button class="small" onclick="enterSelectMode()">☑️ 선택 모드</button>
+        <button class="small danger" onclick="deleteAllFromList()" id="btn-delete-all">🗑 전체 삭제</button>
+      </div>
+      <div id="bulk-select-actions" class="hidden" style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+        <button class="small" onclick="selectAllVisible()">전체 선택</button>
+        <button class="small" onclick="deselectAll()">선택 해제</button>
+        <span id="select-count" style="font-size:12px; color:#666; margin-left:auto; margin-right:6px;">0개 선택</span>
+        <button class="small danger" onclick="deleteSelected()" id="btn-delete-selected" disabled>🗑 선택 삭제</button>
+        <button class="small" onclick="exitSelectMode()">취소</button>
+      </div>
+    </div>
+
+    <div id="all-list"></div>
+    <div id="list-empty" class="empty hidden">
+      <div class="empty-icon">📂</div>
+      <p>등록된 자료가 없어요</p>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-saved">
+    <p style="font-size: 13px; color: #666; margin: 0 0 12px; line-height: 1.6;">
+      "저장하고 끝내기"로 마친 대화들이 여기에 쌓여요.
+    </p>
+    <div id="saved-chats-list"></div>
+    <div id="saved-empty" class="empty hidden">
+      <div class="empty-icon">💬</div>
+      <p>저장된 대화가 없어요</p>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-settings">
+    <p class="section-label">🤖 AI 기능 설정</p>
+    <div class="warning">
+      <strong>⚠ 보안 안내</strong>
+      AI를 쓰면 질문할 때마다 자료 일부가 Anthropic 서버로 전송돼요.
+    </div>
+    <p style="font-size: 13px; color: #666; margin: 0 0 8px;"><strong>Claude API 키</strong> (sk-ant-...)</p>
+    <input type="password" id="api-key" placeholder="API 키 붙여넣기">
+    <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+      <button class="primary" style="flex:1" onclick="saveApiKey()">키 저장</button>
+      <button onclick="testApiKey()">연결 테스트</button>
+      <button class="danger" onclick="removeApiKey()">삭제</button>
+    </div>
+
+    <p class="section-label" style="margin-top: 24px;">🎯 정확도 향상 (NEW)</p>
+    <p style="font-size: 12px; color: #666; line-height: 1.6; margin: 0 0 12px;">
+      AI가 답변하기 전에 자료 목록을 먼저 검토해서 누락 없이 답해요. 자료가 많아질수록 효과 큼.
+    </p>
+
+    <div class="eco-toggle" style="background: #e8f0fe; border: 1px solid #c2d9ff;">
+      <div class="eco-toggle-row">
+        <label>🧠 AI 자료 선택 (강력 추천)<br><span style="font-size:11px;color:#666;font-weight:400">키워드 매칭 X → AI가 직접 자료 목록 보고 선택. 누락 거의 없음</span></label>
+        <label class="toggle-switch">
+          <input type="checkbox" id="eco-smart" checked onchange="saveEcoSettings()">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div class="eco-current" id="smart-current">현재: 🧠 AI가 자료 직접 선택 (정확도↑)</div>
+    </div>
+
+    <p class="section-label" style="margin-top: 24px;">💰 비용 최적화 (Eco 모드)</p>
+    <p style="font-size: 12px; color: #666; line-height: 1.6; margin: 0 0 12px;">
+      4가지 절감 기능을 켜고 끌 수 있어요. 다 켜면 80% 절감, 하지만 답변 품질이 살짝 떨어질 수도 있어요.
+    </p>
+
+    <div class="eco-toggle">
+      <div class="eco-toggle-row">
+        <label>🎯 똑똑한 청크 추출<br><span style="font-size:11px;color:#888;font-weight:400">자료에서 질문 관련 부분만 골라 보냄 (~70% 절감)</span></label>
+        <label class="toggle-switch">
+          <input type="checkbox" id="eco-chunk" checked onchange="saveEcoSettings()">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <div class="eco-toggle">
+      <div class="eco-toggle-row">
+        <label>🤖 AI 모델 선택<br><span style="font-size:11px;color:#888;font-weight:400">ON = Sonnet (똑똑·정확) / OFF = Haiku (빠르고 저렴)</span></label>
+        <label class="toggle-switch">
+          <input type="checkbox" id="eco-model" checked onchange="saveEcoSettings()">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div class="eco-current" id="model-current">현재: 🧠 Sonnet (똑똑한 모드)</div>
+    </div>
+
+    <div class="eco-toggle">
+      <div class="eco-toggle-row">
+        <label>💾 자료 캐싱<br><span style="font-size:11px;color:#888;font-weight:400">반복 자료 90% 할인 (~60% 절감)</span></label>
+        <label class="toggle-switch">
+          <input type="checkbox" id="eco-cache" checked onchange="saveEcoSettings()">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <div class="eco-toggle">
+      <div class="eco-toggle-row">
+        <label>📝 대화 요약<br><span style="font-size:11px;color:#888;font-weight:400">긴 대화는 옛 메시지 자동 요약 (~40% 절감)</span></label>
+        <label class="toggle-switch">
+          <input type="checkbox" id="eco-summary" checked onchange="saveEcoSettings()">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <p class="section-label" style="margin-top: 24px;">백업 / 복원</p>
+    <button class="btn-full" onclick="exportData()">📤 전체 자료 내보내기</button>
+    <div style="height: 8px;"></div>
+    <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
+    <button class="btn-full" onclick="document.getElementById('import-file').click()">📥 백업 파일에서 불러오기</button>
+
+    <p class="section-label" style="margin-top: 24px;">샘플 자료</p>
+    <button class="btn-full" onclick="loadSamples()">샘플 자료 추가하기</button>
+
+    <p class="section-label" style="margin-top: 24px;">전체 삭제</p>
+    <button class="danger btn-full" onclick="clearAll()">⚠ 전체 자료 삭제</button>
+
+    <p class="section-label" style="margin-top: 24px;">정보</p>
+    <details>
+      <summary>Eco 모드는 어떻게 작동하나요?</summary>
+      <p>· <strong>청크 추출</strong>: 자료 통째 X, 질문 관련 부분만 1500자씩 추출</p>
+      <p>· <strong>모델 자동</strong>: 단순 질문은 Haiku(저렴), 복잡 케이스는 Sonnet</p>
+      <p>· <strong>캐싱</strong>: 같은 자료 반복 전송시 두 번째부터 90% 할인</p>
+      <p>· <strong>대화 요약</strong>: 5개 이상 메시지 시 옛 대화 요약본으로 압축</p>
+    </details>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+if (typeof pdfjsLib !== 'undefined') {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
+const STORAGE_KEY = 'banking_assistant_docs_v1';
+const API_KEY_STORAGE = 'banking_assistant_apikey_v1';
+const CHATS_STORAGE = 'banking_assistant_chats_v1';
+const ECO_STORAGE = 'banking_assistant_eco_v1';
+const MAX_BODY_LENGTH = 500000;
+
+function loadDocs() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch(e) { return []; } }
+function saveDocs(docs) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(docs)); return true; }
+  catch(e) {
+    if (e.name === 'QuotaExceededError' || e.code === 22) { toast('저장 공간 부족'); return false; }
+    return false;
+  }
+}
+function loadChats() { try { return JSON.parse(localStorage.getItem(CHATS_STORAGE)) || []; } catch(e) { return []; } }
+function saveChatsList(chats) { try { localStorage.setItem(CHATS_STORAGE, JSON.stringify(chats)); return true; } catch(e) { return false; } }
+
+// Eco 설정
+const DEFAULT_ECO = { chunk: true, model: true, cache: true, summary: true, smart: true };
+function loadEco() { try { return Object.assign({}, DEFAULT_ECO, JSON.parse(localStorage.getItem(ECO_STORAGE)) || {}); } catch(e) { return DEFAULT_ECO; } }
+function saveEcoSettings() {
+  const eco = {
+    chunk: document.getElementById('eco-chunk').checked,
+    model: document.getElementById('eco-model').checked,
+    cache: document.getElementById('eco-cache').checked,
+    summary: document.getElementById('eco-summary').checked,
+    smart: document.getElementById('eco-smart')?.checked ?? true
+  };
+  localStorage.setItem(ECO_STORAGE, JSON.stringify(eco));
+  updateAIStatus();
+  toast('설정 저장됨');
+}
+
+let allDocs = loadDocs();
+let currentFilter = '';
+let apiKey = localStorage.getItem(API_KEY_STORAGE) || '';
+let currentChat = null;
+
+function updateAIStatus() {
+  const badge = document.getElementById('ai-badge');
+  const askBtn = document.getElementById('ask-btn');
+  const warn = document.getElementById('ai-disabled-warn');
+  const eco = loadEco();
+  if (apiKey) {
+    // 모델 표시
+    const modelLabel = eco.model ? '🧠 Sonnet' : '⚡ Haiku';
+    badge.textContent = modelLabel;
+    badge.className = eco.model ? 'ai-badge' : 'ai-badge eco';
+    askBtn.disabled = false;
+    warn.classList.add('hidden');
+  } else {
+    badge.textContent = 'AI OFF';
+    badge.className = 'ai-badge off';
+    askBtn.disabled = true;
+    warn.classList.remove('hidden');
+  }
+  // 설정 화면의 현재 모델 상태 업데이트
+  const modelCurrent = document.getElementById('model-current');
+  if (modelCurrent) {
+    if (eco.model) {
+      modelCurrent.textContent = '현재: 🧠 Sonnet (똑똑·정확 모드)';
+      modelCurrent.className = 'eco-current';
+    } else {
+      modelCurrent.textContent = '현재: ⚡ Haiku (빠르고 저렴 모드)';
+      modelCurrent.className = 'eco-current off';
+    }
+  }
+}
+
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('panel-' + t.dataset.tab).classList.add('active');
+    if (t.dataset.tab === 'list') renderList();
+    if (t.dataset.tab === 'saved') renderSavedChats();
+    if (t.dataset.tab === 'settings') {
+      document.getElementById('api-key').value = apiKey ? '●●●●●●●●●●●●' + apiKey.slice(-4) : '';
+      const eco = loadEco();
+      document.getElementById('eco-chunk').checked = eco.chunk;
+      document.getElementById('eco-model').checked = eco.model;
+      document.getElementById('eco-cache').checked = eco.cache;
+      document.getElementById('eco-summary').checked = eco.summary;
+      document.getElementById('eco-smart').checked = eco.smart;
+      // smart 현재 상태 표시 갱신
+      const smartCurrent = document.getElementById('smart-current');
+      if (smartCurrent) {
+        if (eco.smart) {
+          smartCurrent.textContent = '현재: 🧠 AI가 자료 직접 선택 (정확도↑)';
+          smartCurrent.className = 'eco-current';
+        } else {
+          smartCurrent.textContent = '현재: 🔍 키워드 검색 (빠르지만 누락 가능)';
+          smartCurrent.className = 'eco-current off';
+        }
+      }
+    }
+  });
+});
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+// API 키
+function saveApiKey() {
+  const input = document.getElementById('api-key').value.trim();
+  if (!input || input.startsWith('●')) { toast('API 키 입력해주세요'); return; }
+  if (!input.startsWith('sk-ant-')) {
+    if (!confirm('Claude API 키는 보통 "sk-ant-"로 시작해요. 그래도 저장?')) return;
+  }
+  apiKey = input;
+  localStorage.setItem(API_KEY_STORAGE, apiKey);
+  document.getElementById('api-key').value = '●●●●●●●●●●●●' + apiKey.slice(-4);
+  updateAIStatus();
+  toast('API 키 저장됨 ✓');
+}
+function removeApiKey() {
+  if (!confirm('삭제할까요?')) return;
+  apiKey = '';
+  localStorage.removeItem(API_KEY_STORAGE);
+  document.getElementById('api-key').value = '';
+  updateAIStatus();
+  toast('삭제됨');
+}
+async function testApiKey() {
+  if (!apiKey || apiKey.startsWith('●')) { toast('먼저 키 저장'); return; }
+  toast('테스트 중...');
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 30, messages: [{ role: 'user', content: '"OK"라고만' }] })
+    });
+    if (res.ok) toast('연결 성공 ✓');
+    else { const err = await res.json().catch(() => ({})); toast('실패: ' + (err.error?.message || res.status)); }
+  } catch(e) { toast('오류: ' + e.message); }
+}
+
+// ============ Eco 1: 똑똑한 청크 추출 ============
+// 자료 본문에서 질문과 가장 관련된 부분만 추출
+function extractRelevantChunks(body, queryTokens, maxChunks = 3, chunkSize = 1500) {
+  // 본문을 문단 단위로 분할
+  const paragraphs = body.split(/\n\n+|\[\d+페이지\]/).filter(p => p.trim().length > 50);
+
+  if (paragraphs.length === 0) return body.slice(0, chunkSize);
+
+  // 각 문단에 점수 매기기
+  const scored = paragraphs.map((para, idx) => {
+    const lower = para.toLowerCase();
+    let score = 0;
+    queryTokens.forEach(tk => {
+      const matches = lower.split(tk).length - 1;
+      score += matches * (tk.length >= 3 ? 2 : 1);
+    });
+    return { para, idx, score };
+  });
+
+  // 점수 높은 상위 청크 추출
+  const top = scored.filter(s => s.score > 0).sort((a, b) => b.score - a.score).slice(0, maxChunks);
+  if (top.length === 0) return body.slice(0, chunkSize);
+
+  // 원래 순서대로 재정렬해서 반환
+  top.sort((a, b) => a.idx - b.idx);
+  let result = '';
+  let totalLen = 0;
+  for (const item of top) {
+    if (totalLen + item.para.length > chunkSize * maxChunks) break;
+    result += '...\n' + item.para.trim() + '\n';
+    totalLen += item.para.length;
+  }
+  return result.trim();
+}
+
+// ============ 관련 자료 찾기 (1차: 키워드 기반) ============
+function findRelevantDocs(question, maxDocs = 8) {
+  const tokens = question.toLowerCase().replace(/[?!.,。、!?]/g, ' ').split(/\s+/).filter(t => t.length >= 2);
+  const scored = allDocs.map(d => {
+    const haystack = (d.title + ' ' + d.body + ' ' + (d.tags||[]).join(' ')).toLowerCase();
+    let score = 0;
+    tokens.forEach(tk => {
+      if (d.title.toLowerCase().includes(tk)) score += 10;
+      if ((d.tags||[]).some(t => t.toLowerCase().includes(tk))) score += 5;
+      const matches = haystack.split(tk).length - 1;
+      score += Math.min(matches, 5);
+    });
+    return { doc: d, score };
+  }).filter(x => x.score > 0).sort((a, b) => b.score - a.score).slice(0, maxDocs);
+  return scored.map(x => x.doc);
+}
+
+// ============ AI 기반 자료 선택 (2차: AI가 직접 자료 목록 보고 선택) ============
+async function findRelevantDocsByAI(question, conversationContext) {
+  if (allDocs.length === 0) return [];
+  if (allDocs.length <= 3) return allDocs; // 자료가 적으면 그냥 다 보냄
+
+  // 자료 목록 만들기 (제목 + 카테고리 + 태그 + 본문 첫 200자 요약)
+  const docList = allDocs.map((d, i) => {
+    const preview = d.body.slice(0, 200).replace(/\n/g, ' ');
+    const tags = (d.tags || []).length > 0 ? `[태그: ${d.tags.join(', ')}]` : '';
+    return `${i+1}. ${d.title} (${d.category}) ${tags}\n   미리보기: ${preview}...`;
+  }).join('\n\n');
+
+  const selectorPrompt = `너는 한국 시중은행 업무 도우미의 자료 선택기야. 후배가 질문하면, 등록된 자료 목록을 보고 답변에 필요한 자료 번호를 골라줘.
+
+==== 등록된 자료 목록 (총 ${allDocs.length}개) ====
+${docList}
+
+==== 후배의 질문 ====
+${question}
+
+${conversationContext ? `==== 대화 맥락 ====\n${conversationContext}\n` : ''}
+
+==== 지시사항 ====
+1. 질문과 관련 가능성이 1%라도 있는 자료는 모두 골라줘. 놓치는 것보다 많이 고르는 게 나아.
+2. 특히 부동산/대출/규제/한도/LTV/DSR 관련 케이스에서는 "주담대", "대책", "규제", "안정화", "한도", "여신정책" 같은 키워드 들어간 자료 반드시 포함.
+3. 외환 케이스에서는 "외국환", "수출", "수입", "송금", "외환" 관련 자료 모두 포함.
+4. 절차/처리 케이스에서는 관련 업무지침·운용지침 모두 포함.
+5. 답변은 반드시 JSON 배열 형식으로만: [1, 3, 5, 7]
+6. 다른 설명 없이 JSON만 출력. 관련 자료가 없으면 [].
+7. 최대 6개까지만 선택 가능. 정말 핵심적인 것만 골라. 너무 많이 고르면 답변 품질이 떨어져.
+8. 우선순위: (1) 직접적으로 답이 있는 자료, (2) 보조 정보 주는 자료. 1순위부터 채우되 6개 넘지 마.`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001', // 자료 선택은 Haiku로 (저렴)
+        max_tokens: 200,
+        messages: [{ role: 'user', content: selectorPrompt }]
+      })
+    });
+
+    if (!res.ok) {
+      console.warn('자료 선택 AI 호출 실패, 키워드 검색으로 폴백');
+      return findRelevantDocs(question);
+    }
+
+    const data = await res.json();
+    const text = data.content[0]?.text || '[]';
+
+    // JSON 파싱 (안전하게)
+    const match = text.match(/\[[\d,\s]*\]/);
+    if (!match) return findRelevantDocs(question);
+
+    const indices = JSON.parse(match[0]);
+    if (!Array.isArray(indices)) return findRelevantDocs(question);
+
+    // 1-based → 0-based, 유효성 체크
+    const selected = indices
+      .map(n => parseInt(n) - 1)
+      .filter(n => n >= 0 && n < allDocs.length)
+      .map(n => allDocs[n]);
+
+    // 선택 비용 누적 (대화에 표시용)
+    if (currentChat) {
+      const usage = data.usage || {};
+      const selectorTokens = (usage.input_tokens || 0) + (usage.output_tokens || 0);
+      currentChat.selectorTokens = (currentChat.selectorTokens || 0) + selectorTokens;
+    }
+
+    return selected.length > 0 ? selected : findRelevantDocs(question);
+  } catch(e) {
+    console.warn('자료 선택 오류:', e);
+    return findRelevantDocs(question);
+  }
+}
+
+// ============ Eco 2: 모델 선택 (ON=Sonnet, OFF=Haiku) ============
+function selectModel(question, isFollowup) {
+  const eco = loadEco();
+  // ON = 똑똑한 Sonnet, OFF = 저렴한 Haiku
+  return eco.model ? 'claude-sonnet-4-5-20250929' : 'claude-haiku-4-5-20251001';
+}
+
+// ============ 시스템 프롬프트 빌드 ============
+function buildSystemBlocks(question, relevantDocs) {
+  const eco = loadEco();
+  const tokens = question.toLowerCase().replace(/[?!.,]/g, ' ').split(/\s+/).filter(t => t.length >= 2);
+
+  // ★스마트 본문 분배 (v8 NEW)
+  // - 자료 본문 < 4,000자: 통째로 (어차피 짧음)
+  // - 자료 본문 4,000~10,000자: 청크 추출로 핵심만 (3,000자)
+  // - 자료 본문 > 10,000자: 청크 추출로 핵심만 (4,500자)
+  // → 잘게 쪼갠 자료는 통째로 들어가서 정확도↑, 큰 자료는 핵심만 추려서 비용↓
+  const docContext = relevantDocs.length > 0
+    ? relevantDocs.map((d, i) => {
+        let content;
+        const bodyLen = d.body.length;
+        if (bodyLen < 4000) {
+          content = d.body; // 작은 자료는 통째로
+        } else if (eco.chunk) {
+          const chunkSize = bodyLen > 10000 ? 4500 : 3000;
+          content = extractRelevantChunks(d.body, tokens, 3, chunkSize);
+        } else {
+          content = d.body.slice(0, 8000);
+        }
+        return `[자료 ${i+1}: ${d.title} (${d.category})]\n${content}`;
+      }).join('\n\n---\n\n')
+    : '(관련 자료 없음)';
+
+  const instructionText = `너는 한국 시중은행에서 일하는 10년차 친근한 선배야. 후배가 새 부서에서 업무 배우는 중이야. 친근한 반말로 답해.
+
+==== 가장 중요한 규칙 ====
+1. 답변은 [참고자료]에 있는 내용만 근거로. 자료에 없으면 "내가 받은 자료엔 안 나와"라고 솔직히 말해.
+2. 자료에 없는 부분 추정·짐작 금지.
+3. 정확한 금액·한도·이율은 자료에 명시된 경우만. "회사 시스템 재확인 필수" 안내.
+4. 부동산/대출 규제는 정부정책 자주 바뀌니까 자료에 없으면 반드시 "최신 규제 추가 확인 필요" 경고.
+
+==== 답변 전 셀프 체크 (★중요) ====
+답변 작성 전에 마음속으로 다음을 점검:
+1. 제공받은 [참고자료] 제목들을 다 훑어봤는가? (놓치지 말기)
+2. 부동산·대출·규제·한도 관련 케이스라면, "주담대", "대책", "규제", "한도", "안정화", "LTV", "DSR" 같은 키워드 들어간 자료 본문 확인했는가?
+3. 외환 케이스라면 "외국환", "수출", "수입", "송금" 자료 확인했는가?
+4. 자료에 답이 있는데도 못 본 척하지 않았는가?
+이 점검 후 답변 시작.
+
+==== 첫 답변 형식 ====
+첫 질문: 【케이스 한 줄 정리】 / 【먼저 확인할 것】 / 【처리 워크플로우】 / 【필요 서류 / 전결 / 한도】 / 【주의사항】 / 【근거 자료】 (해당 없는 항목 생략)
+
+==== 이어진 질문 형식 ====
+자연스럽게, 짧고 핵심만. 형식 강제 X.
+
+==== 톤 ====
+친근한 반말, 차근차근, 모르는 건 솔직히.`;
+
+  // 캐싱 활성화: system을 블록 배열로
+  if (eco.cache && relevantDocs.length > 0) {
+    return [
+      { type: 'text', text: instructionText },
+      { type: 'text', text: '==== 참고자료 ====\n' + docContext, cache_control: { type: 'ephemeral' } }
+    ];
+  } else {
+    return instructionText + '\n\n==== 참고자료 ====\n' + docContext;
+  }
+}
+
+// ============ Eco 4: 대화 요약 ============
+async function summarizeOldMessages(messages) {
+  // 처음 메시지부터 5개를 요약 1개로 압축
+  const toSummarize = messages.slice(0, -2); // 마지막 2개(현재 질문 직전 답변, 현재 질문)는 유지
+  if (toSummarize.length < 4) return messages;
+
+  const summary = '이전 대화 요약:\n' + toSummarize.map(m => {
+    const role = m.role === 'user' ? '후배' : '선배';
+    const content = typeof m.content === 'string' ? m.content : '';
+    return `${role}: ${content.slice(0, 150)}${content.length > 150 ? '...' : ''}`;
+  }).join('\n');
+
+  const recent = messages.slice(-2);
+  return [
+    { role: 'user', content: summary },
+    { role: 'assistant', content: '응 알겠어, 이어서 답할게.' },
+    ...recent
+  ];
+}
+
+async function startConversation() {
+  const question = document.getElementById('ai-question').value.trim();
+  if (!question) { toast('질문을 입력해주세요'); return; }
+  if (!apiKey) { toast('API 키 등록 필요'); return; }
+
+  const eco = loadEco();
+
+  // 임시 currentChat 생성 (자료 선택 시 비용 누적 위해)
+  currentChat = {
+    id: Date.now() + '-' + Math.random().toString(36).slice(2,7),
+    topic: question.slice(0, 40) + (question.length > 40 ? '...' : ''),
+    messages: [{ role: 'user', content: question }],
+    referencedDocs: [],
+    totalCostKRW: 0,
+    savedKRW: 0,
+    selectorTokens: 0,
+    createdAt: new Date().toISOString()
+  };
+
+  // UI 먼저 띄우기
+  document.getElementById('initial-input').classList.add('hidden');
+  document.getElementById('chat-area').classList.remove('hidden');
+  document.getElementById('followup-input').classList.remove('hidden');
+  document.getElementById('chat-topic').textContent = currentChat.topic;
+  renderMessages();
+
+  // 자료 선택 진행 표시
+  showLoadingMessage('자료 목록 검토 중... (AI가 관련 자료 고르는 중)');
+
+  // AI 기반 자료 선택 (smart 모드) 또는 키워드 기반
+  const relevantDocs = eco.smart
+    ? await findRelevantDocsByAI(question, null)
+    : findRelevantDocs(question);
+
+  currentChat.referencedDocs = relevantDocs.map(d => ({ id: d.id, title: d.title }));
+
+  removeLoadingMessage();
+  await callAI(relevantDocs, false);
+}
+
+async function sendFollowup() {
+  const text = document.getElementById('followup-question').value.trim();
+  if (!text) return;
+  if (!currentChat) return;
+
+  const eco = loadEco();
+
+  currentChat.messages.push({ role: 'user', content: text });
+  document.getElementById('followup-question').value = '';
+  document.getElementById('followup-question').style.height = 'auto';
+  renderMessages();
+
+  // ★ v8 NEW: 스마트 후속 처리
+  // 짧은 후속 질문(50자 이하) 또는 일반 의문사로 시작하는 경우 → 기존 자료 재활용 (캐시 적중↑)
+  // 새로운 주제로 보이는 긴 질문 → 자료 재선택
+  const isSimpleFollowup = text.length < 50
+    || /^(왜|어떻게|언제|누가|뭐|무엇|얼마|그러면|그럼|아니면|만약|그런데|그리고|또|좀더|더|그래서)/.test(text);
+
+  if (isSimpleFollowup && currentChat.referencedDocs.length > 0) {
+    // 자료 재선택 스킵 → 기존 자료 그대로 사용 → 캐시 적중률↑
+    const allReferencedDocs = currentChat.referencedDocs
+      .map(ref => allDocs.find(d => d.id === ref.id))
+      .filter(Boolean);
+    await callAI(allReferencedDocs, true);
+    return;
+  }
+
+  // 새 주제 같으면 자료 재선택
+  showLoadingMessage('자료 목록 검토 중...');
+
+  const conversationContext = currentChat.messages.slice(0, -1)
+    .map(m => `${m.role === 'user' ? '후배' : '선배'}: ${(typeof m.content === 'string' ? m.content : '').slice(0, 200)}`)
+    .join('\n');
+
+  const newDocs = eco.smart
+    ? await findRelevantDocsByAI(text, conversationContext)
+    : findRelevantDocs(text);
+
+  // 기존 참고 자료 + 새로 선택된 자료 병합
+  const existingIds = new Set(currentChat.referencedDocs.map(d => d.id));
+  newDocs.forEach(d => {
+    if (!existingIds.has(d.id)) {
+      currentChat.referencedDocs.push({ id: d.id, title: d.title });
+      existingIds.add(d.id);
+    }
+  });
+
+  removeLoadingMessage();
+
+  const allReferencedDocs = currentChat.referencedDocs
+    .map(ref => allDocs.find(d => d.id === ref.id))
+    .filter(Boolean);
+
+  await callAI(allReferencedDocs, true);
+}
+
+function showLoadingMessage(text) {
+  const list = document.getElementById('messages-list');
+  let loading = document.getElementById('loading-msg');
+  if (!loading) {
+    loading = document.createElement('div');
+    loading.className = 'thinking';
+    loading.id = 'loading-msg';
+    list.appendChild(loading);
+  }
+  loading.innerHTML = `<div class="dots"><span></span><span></span><span></span></div><span>${escapeHtml(text)}</span>`;
+  scrollChatToBottom();
+}
+
+function removeLoadingMessage() {
+  document.getElementById('loading-msg')?.remove();
+}
+
+async function callAI(relevantDocs, isFollowup) {
+  if (!currentChat) return;
+  const eco = loadEco();
+
+  showLoadingMessage(`선배가 답 정리 중... ${relevantDocs.length > 0 ? `(${relevantDocs.length}개 자료 검토)` : ''}`);
+
+  document.getElementById('followup-btn').disabled = true;
+  document.getElementById('followup-question').disabled = true;
+
+  // 마지막 사용자 질문
+  const lastUserMsg = currentChat.messages.filter(m => m.role === 'user').pop();
+  const question = lastUserMsg.content;
+
+  // 메시지 준비 (요약 적용)
+  // ★중요: API에 보낼 때는 meta 필드 등 추가 정보 제거 (role, content만 남김)
+  let messagesToSend = currentChat.messages.map(m => ({
+    role: m.role,
+    content: m.content
+  }));
+  let usedSummary = false;
+  if (eco.summary && messagesToSend.length >= 6) {
+    messagesToSend = await summarizeOldMessages(messagesToSend);
+    usedSummary = true;
+  }
+
+  // 모델 선택
+  const model = selectModel(question, isFollowup);
+  const systemBlocks = buildSystemBlocks(question, relevantDocs);
+
+  try {
+    const headers = {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    };
+    // 캐싱 헤더
+    if (eco.cache && Array.isArray(systemBlocks)) {
+      headers['anthropic-beta'] = 'prompt-caching-2024-07-31';
+    }
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify({
+        model: model,
+        max_tokens: 2000,
+        system: systemBlocks,
+        messages: messagesToSend
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error?.message || `오류 ${res.status}`);
+    }
+
+    const data = await res.json();
+    const answer = data.content[0]?.text || '(빈 답변)';
+    const usage = data.usage || {};
+
+    // 비용 계산
+    const inputTokens = usage.input_tokens || 0;
+    const cachedTokens = usage.cache_read_input_tokens || 0;
+    const cacheCreationTokens = usage.cache_creation_input_tokens || 0;
+    const outputTokens = usage.output_tokens || 0;
+
+    // 가격 (USD per million tokens) → KRW
+    const usdToKrw = 1380;
+    const isHaiku = model.includes('haiku');
+    const inputPrice = isHaiku ? 0.8 : 3.0;
+    const outputPrice = isHaiku ? 4.0 : 15.0;
+    const cachedPrice = isHaiku ? 0.08 : 0.30; // 90% 할인
+    const cacheCreationPrice = isHaiku ? 1.0 : 3.75; // 25% 추가
+
+    const costUsd = (inputTokens * inputPrice + cachedTokens * cachedPrice + cacheCreationTokens * cacheCreationPrice + outputTokens * outputPrice) / 1000000;
+    let costKRW = costUsd * usdToKrw;
+
+    // 자료 선택 비용 추가 (Haiku로 계산)
+    const selectorTokens = currentChat.selectorTokens || 0;
+    const selectorCostKRW = (selectorTokens * 0.8 / 1000000) * usdToKrw; // Haiku 입력가 기준 단순화
+    costKRW += selectorCostKRW;
+    currentChat.selectorTokens = 0; // 누적 후 리셋
+
+    // 절감액 계산 (만약 모든 최적화 안 했다면 들었을 비용)
+    const baselineUsd = ((inputTokens + cachedTokens + cacheCreationTokens) * 3.0 + outputTokens * 15.0) / 1000000;
+    const savedKRW = baselineUsd * usdToKrw - costKRW;
+
+    currentChat.totalCostKRW += costKRW;
+    currentChat.savedKRW += Math.max(0, savedKRW);
+
+    // 답변에 메타정보 첨부
+    const meta = {
+      model: isHaiku ? 'Haiku ⚡' : 'Sonnet',
+      tokens: inputTokens + cachedTokens + cacheCreationTokens + outputTokens,
+      cached: cachedTokens > 0,
+      summary: usedSummary,
+      smart: eco.smart && selectorTokens > 0,
+      cost: Math.round(costKRW)
+    };
+
+    currentChat.messages.push({ role: 'assistant', content: answer, meta: meta });
+
+    document.getElementById('loading-msg')?.remove();
+    renderMessages();
+    updateCostInfo();
+  } catch(e) {
+    document.getElementById('loading-msg')?.remove();
+    const errEl = document.createElement('div');
+    errEl.className = 'warning danger';
+    errEl.innerHTML = `<strong>⚠ 답변 못 받음</strong>${escapeHtml(e.message)}`;
+    document.getElementById('messages-list').appendChild(errEl);
+  } finally {
+    document.getElementById('followup-btn').disabled = false;
+    document.getElementById('followup-question').disabled = false;
+    document.getElementById('followup-question').focus();
+  }
+}
+
+function renderMessages() {
+  if (!currentChat) return;
+  const list = document.getElementById('messages-list');
+  list.innerHTML = '';
+
+  currentChat.messages.forEach((msg, idx) => {
+    const div = document.createElement('div');
+    if (msg.role === 'user') {
+      div.className = 'msg user';
+      div.innerHTML = `<div class="bubble">${escapeHtml(msg.content)}</div>`;
+    } else {
+      div.className = 'msg ai';
+      const isLast = idx === currentChat.messages.length - 1;
+      const showSources = isLast && currentChat.referencedDocs.length > 0;
+      const meta = msg.meta;
+      div.innerHTML = `
+        <div class="ai-header">
+          <div class="ai-icon">AI</div>
+          <span>선배</span>
+        </div>
+        <div class="bubble">${formatAnswer(msg.content)}
+          ${meta ? `
+            <div class="meta-row">
+              <span>🤖 ${meta.model}</span>
+              <span>📊 ${meta.tokens.toLocaleString()}토큰</span>
+              <span>💰 ${meta.cost}원</span>
+              ${meta.smart ? '<span style="color:#1967d2">🧠 AI 자료선택</span>' : ''}
+              ${meta.cached ? '<span style="color:#137333">💾 캐시 적중</span>' : ''}
+              ${meta.summary ? '<span style="color:#b06000">📝 요약됨</span>' : ''}
+            </div>
+          ` : ''}
+          ${showSources ? `
+            <div class="sources">
+              <strong style="font-size:11px;">📎 참고 자료 (${currentChat.referencedDocs.length}개)</strong><br>
+              ${currentChat.referencedDocs.map(d => `<span class="src-tag">${escapeHtml(d.title)}</span>`).join('')}
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }
+    document.getElementById('messages-list').appendChild(div);
+  });
+
+  document.getElementById('msg-count').textContent = currentChat.messages.length + '개 메시지';
+  scrollChatToBottom();
+}
+
+function scrollChatToBottom() {
+  const c = document.getElementById('chat-messages');
+  setTimeout(() => { c.scrollTop = c.scrollHeight; }, 50);
+}
+
+function updateCostInfo() {
+  if (!currentChat) return;
+  const cost = Math.round(currentChat.totalCostKRW);
+  const saved = Math.round(currentChat.savedKRW);
+  const el = document.getElementById('cost-info');
+  if (saved > 0) {
+    el.className = 'cost-info saved';
+    el.textContent = `누적 ${cost}원 (Eco로 ${saved}원 절감)`;
+  } else {
+    el.className = 'cost-info';
+    el.textContent = `누적 ${cost}원`;
+  }
+}
+
+function endConversation(save) {
+  if (!currentChat) return;
+  if (save && currentChat.messages.length >= 2) {
+    const chats = loadChats();
+    chats.unshift({
+      id: currentChat.id,
+      topic: currentChat.topic,
+      messages: currentChat.messages,
+      referencedDocs: currentChat.referencedDocs,
+      totalCostKRW: currentChat.totalCostKRW,
+      savedKRW: currentChat.savedKRW,
+      createdAt: currentChat.createdAt,
+      endedAt: new Date().toISOString()
+    });
+    if (saveChatsList(chats)) toast('대화 저장됨 ✓');
+  } else if (save) toast('저장할 대화 없음');
+  else toast('대화 종료');
+
+  currentChat = null;
+  document.getElementById('chat-area').classList.add('hidden');
+  document.getElementById('followup-input').classList.add('hidden');
+  document.getElementById('initial-input').classList.remove('hidden');
+  document.getElementById('ai-question').value = '';
+  document.getElementById('followup-question').value = '';
+  document.getElementById('messages-list').innerHTML = '';
+  document.getElementById('cost-info').textContent = '';
+}
+
+function formatAnswer(text) {
+  return escapeHtml(text)
+    .replace(/【([^】]+)】/g, '<strong style="color:inherit; display:block; margin: 12px 0 4px; font-size: 14px;">【$1】</strong>')
+    .replace(/^\s*([0-9]+단계:|[0-9]+\.) /gm, '<strong>$1</strong> ')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+}
+
+document.getElementById('followup-question').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendFollowup(); }
+});
+document.getElementById('followup-question').addEventListener('input', (e) => {
+  e.target.style.height = 'auto';
+  e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+});
+
+// 저장된 대화
+function renderSavedChats() {
+  const chats = loadChats();
+  const container = document.getElementById('saved-chats-list');
+  const emptyEl = document.getElementById('saved-empty');
+  if (chats.length === 0) { container.innerHTML = ''; emptyEl.classList.remove('hidden'); return; }
+  emptyEl.classList.add('hidden');
+  container.innerHTML = chats.map(c => {
+    const lastMsg = c.messages[c.messages.length - 1];
+    const preview = lastMsg.content.replace(/【[^】]+】/g, '').slice(0, 80);
+    const cost = c.totalCostKRW ? `· ${Math.round(c.totalCostKRW)}원` : '';
+    return `
+      <div class="saved-chat-item" onclick="viewSavedChat('${c.id}')">
+        <div class="title">💬 ${escapeHtml(c.topic)}</div>
+        <div class="preview">${escapeHtml(preview)}...</div>
+        <div class="meta">${c.messages.length}개 메시지 ${cost} · ${new Date(c.endedAt).toLocaleString('ko-KR')}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function viewSavedChat(id) {
+  const chats = loadChats();
+  const chat = chats.find(c => c.id === id);
+  if (!chat) return;
+  const win = window.open('', '_blank');
+  let html = `<html><head><meta charset="utf-8"><title>${escapeHtml(chat.topic)}</title>
+    <style>body{font-family:-apple-system,sans-serif;max-width:700px;margin:20px auto;padding:0 16px;line-height:1.7;color:#222}h1{font-size:18px;margin:0 0 8px}.meta{font-size:12px;color:#888;margin-bottom:20px;border-bottom:1px solid #eee;padding-bottom:12px}.msg{margin-bottom:18px}.role{font-weight:600;margin-bottom:4px;font-size:13px}.role.user{color:#1c1c1c}.role.ai{color:#1967d2}.content{font-size:14px;white-space:pre-wrap;background:#f9f9f7;padding:12px;border-radius:8px}@media(prefers-color-scheme:dark){body{background:#161615;color:#e8e8e6}.meta{color:#aaa;border-bottom-color:#2a2a28}.content{background:#1f1f1d}.role.ai{color:#5dadff}}</style>
+    </head><body>
+    <h1>💬 ${escapeHtml(chat.topic)}</h1>
+    <div class="meta">${chat.messages.length}개 메시지 · ${new Date(chat.createdAt).toLocaleString('ko-KR')}</div>`;
+  chat.messages.forEach(m => {
+    html += `<div class="msg"><div class="role ${m.role==='user'?'user':'ai'}">${m.role === 'user' ? '🙋 후배' : '🤖 AI 선배'}</div><div class="content">${escapeHtml(m.content)}</div></div>`;
+  });
+  html += `</body></html>`;
+  win.document.write(html);
+}
+
+// 파일 업로드
+const uploadZone = document.getElementById('upload-zone');
+const fileInput = document.getElementById('file-input');
+uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+uploadZone.addEventListener('drop', (e) => { e.preventDefault(); uploadZone.classList.remove('dragover'); handleFiles(e.dataTransfer.files); });
+fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+let pendingExtractions = [];
+
+async function handleFiles(files) {
+  const fileList = document.getElementById('file-list');
+  fileList.innerHTML = '';
+  pendingExtractions = [];
+  for (const file of files) {
+    const item = document.createElement('div');
+    item.className = 'file-item processing';
+    item.innerHTML = `<span class="file-icon">📄</span><span class="file-name">${escapeHtml(file.name)}</span><span class="file-status">처리 중...</span>`;
+    fileList.appendChild(item);
+    try {
+      const text = await extractText(file);
+      if (!text || text.trim().length < 10) throw new Error('텍스트 추출 불가');
+      const truncated = text.length > MAX_BODY_LENGTH;
+      const finalText = truncated ? text.slice(0, MAX_BODY_LENGTH) : text;
+      pendingExtractions.push({ filename: file.name, text: finalText, truncated });
+      item.className = 'file-item success';
+      item.querySelector('.file-status').textContent = `✓ ${formatNumber(finalText.length)}자` + (truncated ? ' (일부)' : '');
+    } catch(err) {
+      item.className = 'file-item error';
+      item.querySelector('.file-status').textContent = '✗ ' + err.message;
+    }
+  }
+  if (pendingExtractions.length > 0) showFirstExtraction();
+  fileInput.value = '';
+}
+
+async function extractText(file) {
+  const name = file.name.toLowerCase();
+  if (name.endsWith('.pdf')) return await extractPdf(file);
+  if (name.endsWith('.docx')) return await extractDocx(file);
+  if (name.endsWith('.txt') || name.endsWith('.md')) return await file.text();
+  if (name.endsWith('.hwp')) throw new Error('한글파일은 PDF로 변환');
+  if (name.endsWith('.doc')) throw new Error('.docx로 변환');
+  throw new Error('지원하지 않는 형식');
+}
+async function extractPdf(file) {
+  const buffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+  let fullText = '';
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    const pageText = content.items.map(it => it.str).join(' ');
+    if (pageText.trim()) fullText += `\n\n[${i}페이지]\n${pageText}`;
+  }
+  return fullText.trim();
+}
+async function extractDocx(file) {
+  const buffer = await file.arrayBuffer();
+  const result = await mammoth.extractRawText({ arrayBuffer: buffer });
+  return result.value;
+}
+
+function showFirstExtraction() {
+  if (pendingExtractions.length === 0) { document.getElementById('extracted-area').classList.add('hidden'); return; }
+  const item = pendingExtractions[0];
+  const titleNoExt = item.filename.replace(/\.[^.]+$/, '');
+  document.getElementById('extracted-area').classList.remove('hidden');
+  document.getElementById('ext-title').value = titleNoExt;
+  document.getElementById('ext-tags').value = '';
+  document.getElementById('ext-category').value = guessCategory(titleNoExt + ' ' + item.text.slice(0, 500));
+  document.getElementById('ext-body').value = item.text;
+  if (pendingExtractions.length > 1) toast(`${pendingExtractions.length}개 대기`);
+  document.getElementById('ext-title').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function guessCategory(text) {
+  const lower = text.toLowerCase();
+  if (lower.includes('전결') || lower.includes('결재')) return '전결';
+  if (lower.includes('상품') || lower.includes('약관')) return '상품';
+  if (lower.includes('절차') || lower.includes('처리') || lower.includes('업무방법')) return '절차';
+  if (lower.includes('규정') || lower.includes('규칙') || lower.includes('지침')) return '규정';
+  return '규정';
+}
+
+function saveExtracted() {
+  const title = document.getElementById('ext-title').value.trim();
+  const body = document.getElementById('ext-body').value.trim();
+  const category = document.getElementById('ext-category').value;
+  const tagsRaw = document.getElementById('ext-tags').value.trim();
+  if (!title || !body) { toast('제목/내용 입력'); return; }
+  const tags = tagsRaw ? tagsRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
+  const doc = { id: Date.now()+'-'+Math.random().toString(36).slice(2,7), title, body, category, tags, fromFile: pendingExtractions[0]?.filename, createdAt: new Date().toISOString() };
+  allDocs.unshift(doc);
+  if (saveDocs(allDocs)) {
+    pendingExtractions.shift();
+    toast(pendingExtractions.length > 0 ? `저장. 다음...` : '저장됨 ✓');
+    if (pendingExtractions.length > 0) showFirstExtraction();
+    else { document.getElementById('extracted-area').classList.add('hidden'); document.getElementById('file-list').innerHTML = ''; }
+  } else allDocs.shift();
+}
+
+function cancelExtracted() {
+  pendingExtractions = [];
+  document.getElementById('extracted-area').classList.add('hidden');
+  document.getElementById('file-list').innerHTML = '';
+}
+
+function saveNew() {
+  const title = document.getElementById('new-title').value.trim();
+  const body = document.getElementById('new-body').value.trim();
+  const category = document.getElementById('new-category').value;
+  const tagsRaw = document.getElementById('new-tags').value.trim();
+  if (!title || !body) { toast('제목/내용 입력'); return; }
+  const tags = tagsRaw ? tagsRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
+  const doc = { id: Date.now()+'-'+Math.random().toString(36).slice(2,7), title, body, category, tags, createdAt: new Date().toISOString() };
+  allDocs.unshift(doc);
+  if (saveDocs(allDocs)) {
+    document.getElementById('new-title').value = '';
+    document.getElementById('new-body').value = '';
+    document.getElementById('new-tags').value = '';
+    toast('저장됨 ✓');
+  } else allDocs.shift();
+}
+
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function formatNumber(n) { return n.toLocaleString('ko-KR'); }
+
+// 선택 모드 상태
+let selectMode = false;
+let selectedIds = new Set();
+
+function renderList() {
+  const filter = document.getElementById('list-filter').value.trim().toLowerCase();
+  const container = document.getElementById('all-list');
+  const emptyEl = document.getElementById('list-empty');
+  let docs = currentFilter ? allDocs.filter(d => d.category === currentFilter) : allDocs;
+  if (filter) docs = docs.filter(d => (d.title + d.body + (d.tags||[]).join(' ')).toLowerCase().includes(filter));
+  document.getElementById('stat-total').textContent = allDocs.length;
+  document.getElementById('stat-cats').textContent = new Set(allDocs.map(d => d.category)).size;
+  const sizeBytes = new Blob([JSON.stringify(allDocs)]).size;
+  const sizeKB = sizeBytes / 1024;
+  document.getElementById('stat-storage').textContent = sizeKB > 1024 ? (sizeKB/1024).toFixed(1) + 'MB' : Math.round(sizeKB) + 'KB';
+
+  // 일괄 작업 영역 표시 여부 (자료 1개 이상 있을 때만)
+  document.getElementById('bulk-actions').style.display = allDocs.length > 0 ? 'block' : 'none';
+
+  if (docs.length === 0) { container.innerHTML = ''; emptyEl.classList.remove('hidden'); return; }
+  emptyEl.classList.add('hidden');
+
+  container.innerHTML = docs.map(d => {
+    const isSelected = selectedIds.has(d.id);
+    if (selectMode) {
+      return `
+        <div class="card selectable ${isSelected ? 'selected' : ''}" onclick="toggleSelect('${d.id}')">
+          <div class="card-row">
+            <div class="card-checkbox"></div>
+            <div style="flex:1; min-width:0;">
+              <span class="tag cat-${d.category}">${d.category}</span>
+              ${(d.tags||[]).map(t => `<span class="tag">${escapeHtml(t)}</span>`).join('')}
+              ${d.fromFile ? `<span class="tag size">📄</span>` : ''}
+              <p class="card-title" style="margin-top:6px">${escapeHtml(d.title)}</p>
+              <div class="card-meta">${new Date(d.createdAt).toLocaleDateString('ko-KR')} · ${formatNumber(d.body.length)}자</div>
+              <div class="card-body">${escapeHtml(d.body.slice(0, 100))}${d.body.length>100?'…':''}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    return `
+      <div class="card">
+        <span class="tag cat-${d.category}">${d.category}</span>
+        ${(d.tags||[]).map(t => `<span class="tag">${escapeHtml(t)}</span>`).join('')}
+        ${d.fromFile ? `<span class="tag size">📄</span>` : ''}
+        <p class="card-title" style="margin-top:6px">${escapeHtml(d.title)}</p>
+        <div class="card-meta">${new Date(d.createdAt).toLocaleDateString('ko-KR')} · ${formatNumber(d.body.length)}자</div>
+        <div class="card-body">${escapeHtml(d.body.slice(0, 150))}${d.body.length>150?'…':''}</div>
+        <div class="card-actions">
+          <button class="small" onclick="viewDoc('${d.id}')">전체보기</button>
+          <button class="small" onclick="editDoc('${d.id}')">수정</button>
+          <button class="small danger" onclick="deleteDoc('${d.id}')">삭제</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ============ 일괄 삭제 기능 ============
+function enterSelectMode() {
+  selectMode = true;
+  selectedIds.clear();
+  document.getElementById('bulk-default-actions').classList.add('hidden');
+  document.getElementById('bulk-select-actions').classList.remove('hidden');
+  updateSelectCount();
+  renderList();
+}
+
+function exitSelectMode() {
+  selectMode = false;
+  selectedIds.clear();
+  document.getElementById('bulk-default-actions').classList.remove('hidden');
+  document.getElementById('bulk-select-actions').classList.add('hidden');
+  renderList();
+}
+
+function toggleSelect(id) {
+  if (selectedIds.has(id)) selectedIds.delete(id);
+  else selectedIds.add(id);
+  updateSelectCount();
+  renderList();
+}
+
+function selectAllVisible() {
+  const filter = document.getElementById('list-filter').value.trim().toLowerCase();
+  let docs = currentFilter ? allDocs.filter(d => d.category === currentFilter) : allDocs;
+  if (filter) docs = docs.filter(d => (d.title + d.body + (d.tags||[]).join(' ')).toLowerCase().includes(filter));
+  docs.forEach(d => selectedIds.add(d.id));
+  updateSelectCount();
+  renderList();
+}
+
+function deselectAll() {
+  selectedIds.clear();
+  updateSelectCount();
+  renderList();
+}
+
+function updateSelectCount() {
+  document.getElementById('select-count').textContent = `${selectedIds.size}개 선택`;
+  document.getElementById('btn-delete-selected').disabled = selectedIds.size === 0;
+}
+
+function deleteSelected() {
+  if (selectedIds.size === 0) return;
+  const count = selectedIds.size;
+  if (!confirm(`선택한 ${count}개 자료를 삭제할까요?\n\n이 작업은 되돌릴 수 없어요.`)) return;
+  if (count >= 5 && !confirm(`정말로 ${count}개 자료를 한 번에 삭제하시겠습니까?\n\n마지막 확인입니다.`)) return;
+
+  allDocs = allDocs.filter(d => !selectedIds.has(d.id));
+  saveDocs(allDocs);
+  selectedIds.clear();
+  exitSelectMode();
+  toast(`${count}개 자료가 삭제되었습니다`);
+}
+
+function deleteAllFromList() {
+  if (allDocs.length === 0) { toast('삭제할 자료가 없어요'); return; }
+  const count = allDocs.length;
+
+  if (!confirm(`등록된 자료 ${count}개를 모두 삭제할까요?\n\n⚠ 이 작업은 되돌릴 수 없어요.\n(API 키, 대화 기록, 설정값은 그대로 유지됩니다)`)) return;
+  if (!confirm(`마지막 확인입니다.\n정말로 ${count}개 자료를 모두 지우시겠습니까?\n\n혹시 백업이 필요하면 [취소] 후 설정 탭에서 백업 먼저 받아주세요.`)) return;
+
+  allDocs = [];
+  saveDocs(allDocs);
+  renderList();
+  toast(`${count}개 자료가 모두 삭제되었습니다`);
+}
+document.getElementById('list-filter').addEventListener('input', renderList);
+document.querySelectorAll('#quick-filters button').forEach(b => {
+  b.addEventListener('click', () => {
+    currentFilter = b.dataset.filter;
+    document.querySelectorAll('#quick-filters button').forEach(x => x.classList.remove('primary'));
+    b.classList.add('primary');
+    renderList();
+  });
+});
+
+function viewDoc(id) {
+  const d = allDocs.find(x => x.id === id);
+  if (!d) return;
+  const win = window.open('', '_blank');
+  win.document.write(`<html><head><meta charset="utf-8"><title>${escapeHtml(d.title)}</title><style>body{font-family:-apple-system,sans-serif;max-width:700px;margin:20px auto;padding:0 16px;line-height:1.7}h1{font-size:20px}pre{white-space:pre-wrap;word-break:break-word;font-family:inherit;font-size:14px}@media(prefers-color-scheme:dark){body{background:#161615;color:#e8e8e6}}</style></head><body><h1>${escapeHtml(d.title)}</h1><pre>${escapeHtml(d.body)}</pre></body></html>`);
+}
+
+function editDoc(id) {
+  const d = allDocs.find(x => x.id === id);
+  if (!d) return;
+  if (!confirm('수정하면 새 자료로 교체. 진행?')) return;
+  document.querySelector('[data-tab="add"]').click();
+  document.getElementById('new-title').value = d.title;
+  document.getElementById('new-body').value = d.body;
+  document.getElementById('new-category').value = d.category;
+  document.getElementById('new-tags').value = (d.tags||[]).join(', ');
+  allDocs = allDocs.filter(x => x.id !== id);
+  saveDocs(allDocs);
+  toast('수정 모드');
+}
+
+function deleteDoc(id) {
+  if (!confirm('삭제?')) return;
+  allDocs = allDocs.filter(x => x.id !== id);
+  saveDocs(allDocs);
+  renderList();
+  toast('삭제됨');
+}
+
+function exportData() {
+  if (allDocs.length === 0) { toast('내보낼 자료 없음'); return; }
+  const blob = new Blob([JSON.stringify(allDocs, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `업무비서_백업_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('백업 완료');
+}
+
+function importData(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const imported = JSON.parse(ev.target.result);
+      if (!Array.isArray(imported)) throw new Error();
+      if (confirm(`${imported.length}개 불러올까요?`)) {
+        allDocs = imported.concat(allDocs);
+        saveDocs(allDocs);
+        toast(`${imported.length}개 불러옴`);
+        renderList();
+      }
+    } catch(err) { toast('읽기 실패'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+function clearAll() {
+  if (!confirm('정말 모든 자료 삭제?')) return;
+  if (!confirm('한 번 더 확인. 정말로?')) return;
+  allDocs = [];
+  saveDocs(allDocs);
+  renderList();
+  toast('삭제됨');
+}
+
+function loadSamples() {
+  const samples = [
+    { id: 'sample-1-' + Date.now(), title: '주택담보대출 기본 절차 (예시)', category: '절차', tags: ['주담대'], body: `[처리 단계]\n1단계 - 상담\n2단계 - 서류 접수\n3단계 - 심사 (LTV·DTI·DSR)\n4단계 - 승인 및 약정\n5단계 - 실행`, createdAt: new Date().toISOString() }
+  ];
+  if (allDocs.some(d => d.id.startsWith('sample-'))) { if (!confirm('이미 있음. 또?')) return; }
+  allDocs = samples.concat(allDocs);
+  saveDocs(allDocs);
+  toast('샘플 추가');
+  renderList();
+}
+
+updateAIStatus();
+renderList();
+
+// ============ PWA Service Worker 등록 (오프라인 지원) ============
+if ('serviceWorker' in navigator) {
+  const swCode = `
+    const CACHE_NAME = 'banking-assistant-v9';
+    self.addEventListener('install', (event) => {
+      self.skipWaiting();
+    });
+    self.addEventListener('activate', (event) => {
+      event.waitUntil(clients.claim());
+    });
+    self.addEventListener('fetch', (event) => {
+      // API 호출은 캐시 안 함 (항상 최신 응답 필요)
+      if (event.request.url.includes('api.anthropic.com')) {
+        return; // 네트워크로 직접
+      }
+      // 같은 출처(앱 자체) 리소스만 캐시
+      if (event.request.url.startsWith(self.location.origin)) {
+        event.respondWith(
+          caches.match(event.request).then((cached) => {
+            return cached || fetch(event.request).then((response) => {
+              if (response && response.status === 200) {
+                const responseClone = response.clone();
+                caches.open(CACHE_NAME).then((cache) => {
+                  cache.put(event.request, responseClone);
+                });
+              }
+              return response;
+            }).catch(() => caches.match('/'));
+          })
+        );
+      }
+    });
+  `;
+
+  try {
+    const blob = new Blob([swCode], { type: 'application/javascript' });
+    const swUrl = URL.createObjectURL(blob);
+    navigator.serviceWorker.register(swUrl).catch((err) => {
+      console.log('Service Worker 등록 실패:', err);
+    });
+  } catch(e) {
+    console.log('Service Worker 미지원');
+  }
+}
+
+// ============ 설치 안내 (PWA 첫 방문 시) ============
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  // 설치 가능 상태 → 사용자가 직접 누르면 설치 (추후 버튼으로 추가 가능)
+});
+
+// 첫 방문 시 안내 (한 번만)
+if (!localStorage.getItem('install_hint_shown_v9')) {
+  setTimeout(() => {
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+      || window.navigator.standalone === true;
+    if (!isStandalone) {
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+      const msg = isIOS
+        ? '📲 홈 화면에 앱처럼 추가하려면: 하단 공유 버튼 → "홈 화면에 추가"'
+        : isMobile
+        ? '📲 홈 화면에 앱처럼 추가하려면: 우측 상단 메뉴 → "홈 화면에 추가" 또는 "앱 설치"'
+        : '💻 PC에서도 앱으로 설치 가능: 주소창 우측 설치 아이콘 클릭';
+      toast(msg);
+      localStorage.setItem('install_hint_shown_v9', '1');
+    }
+  }, 3000);
+}
+</script>
+
+</body>
+</html>
